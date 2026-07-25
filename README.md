@@ -1,21 +1,30 @@
-# Game Compatibility Checker
+# Can It Run? — Game Compatibility Checker
 
-Detects your PC's hardware (or lets you enter custom parts), looks up a game's
-requirements on Steam, and tells you whether it'll run — plus which component
-to upgrade if it won't.
+Detects your PC's real hardware and tells you whether it can run any Steam
+game — plus which component to upgrade if it can't. Also supports a custom
+PC builder mode where you type in hypothetical parts instead (backend ready,
+frontend form still TODO).
 
 ## Project structure
 
 ```
 game-compat-checker/
-├── backend/          # Python (FastAPI) API
+├── backend/                  # Python (FastAPI) API
 │   └── app/
-│       ├── main.py           # API entrypoint
-│       ├── hardware.py       # Local hardware detection (psutil/GPUtil)
-│       ├── steam.py          # Steam appdetails fetch + requirement parsing
-│       ├── scoring.py        # Benchmark lookup + comparison/verdict logic
-│       └── benchmarks.py     # CPU/GPU benchmark score table
-├── frontend/         # React app
+│       ├── main.py             # FastAPI endpoints
+│       ├── hardware.py         # Local hardware detection (WMI on Windows)
+│       ├── steam.py            # Live Steam search + requirement parsing
+│       ├── scoring.py          # Comparison/verdict logic
+│       ├── benchmarks.py       # CPU/GPU benchmark score table + fuzzy matching
+│       └── check_game.py       # CLI test harness (search -> compare -> verdict)
+├── frontend/                 # React (Vite) UI
+│   └── src/
+│       ├── App.jsx              # Top-level state + layout
+│       ├── api.js               # Fetch wrappers for the backend
+│       └── components/
+│           ├── SearchBar.jsx
+│           ├── GameResultsList.jsx
+│           └── VerdictCard.jsx  # The verdict/bottleneck readout panel
 └── README.md
 ```
 
@@ -23,35 +32,54 @@ game-compat-checker/
 
 - [x] Week 1 — Hardware detection (`hardware.py`)
 - [x] Week 2 — Scoring/verdict system (`scoring.py`, `benchmarks.py`)
-- [ ] Week 3 — Steam data pipeline (`steam.py`)
-- [ ] Week 4 — FastAPI backend wiring (`main.py`)
-- [ ] Week 5-6 — React frontend
-- [ ] Week 7+ — Polish, deploy
+- [x] Week 3 — Live Steam data pipeline (`steam.py`)
+- [x] Week 4 — FastAPI backend (`main.py`)
+- [x] Week 5-6 — React frontend
+- [ ] Week 7+ — Custom PC builder form, polish, deploy
 
-## Getting started (backend)
+## Getting started
+
+You need **two terminals** running at once - the backend API and the
+frontend dev server.
+
+### 1. Backend
 
 ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Sanity check: prints your real detected CPU/GPU/RAM as JSON
-python app/hardware.py
-
-# Runs a demo comparison of your detected hardware against a
-# placeholder game's requirements (real Steam data lands in Week 3)
-python -m app.scoring
+uvicorn app.main:app --reload
 ```
 
-### Notes
+Runs at http://127.0.0.1:8000 — visit `/docs` for interactive API testing.
+
+### 2. Frontend
+
+In a **separate terminal** (no venv needed - that's Python-only):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Runs at http://localhost:5173 — open this in your browser. It talks to the
+backend automatically.
+
+## Notes
 
 - GPU/CPU detection currently only implemented for Windows (via WMI, so it
   works for NVIDIA/AMD/Intel alike). Other platforms return placeholder values.
-- The benchmark scores in `benchmarks.py` are rough relative-performance
-  numbers, not precise FPS predictions — good enough for a "Good / Playable /
+- Benchmark scores in `benchmarks.py` are rough relative-performance numbers,
+  not precise FPS predictions — good enough for a "Good / Playable /
   Unplayable" verdict, not scientific benchmarking. The table needs to grow
   over time as new hardware releases.
+- Steam's requirements text isn't standardized across games, so `steam.py`'s
+  parser is forgiving but occasionally can't extract a field cleanly -
+  `scoring.py` reports those as "unmatched" rather than guessing.
+- The backend reads whatever hardware it's running on (`/compare`), so it's
+  meant to run locally on your own machine, not as a shared public server.
 
 ## License
 

@@ -1,0 +1,74 @@
+/* ---------------------------------------------------------------
+   Design tokens - "diagnostic readout" theme.
+   Dark slate surfaces, teal-cyan accent, monospace for hardware
+   data/numbers (reads like a real diagnostic tool), geometric sans
+   for UI chrome. Verdict colors are the only saturated color beyond
+   the accent, and only appear once a verdict exists.
+   --------------------------------------------------------------- */
+
+:root {
+  --bg: #0d1214;
+  --surface: #141b1e;
+  --surface-raised: #1a2226;
+  --border: #26333780;
+  --border-strong: #2f3f44;
+
+  --text: #e8edef;
+  --text-muted: #8a9ba3;
+  --text-faint: #566268;
+
+  --accent: #4fd1c5;
+  --accent-dim: #4fd1c530;
+
+  --good: #4ade80;
+  --good-dim: #4ade8022;
+  --warn: #f2b84b;
+  --warn-dim: #f2b84b22;
+  --bad: #f2705f;
+  --bad-dim: #f2705f22;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
