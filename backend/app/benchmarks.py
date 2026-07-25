@@ -115,6 +115,7 @@ CPU_SCORES: dict[str, int] = {
 
 _NOISE_WORDS = [
     r"\(r\)", r"\(tm\)", r"\(c\)",
+    "™", "®", "©",   # Steam uses actual Unicode trademark symbols, not just (TM)/(R) text
     "intel", "amd", "nvidia", "geforce", "radeon",
     "processor", "graphics card", "cpu", "gpu",
     "with", "family",
