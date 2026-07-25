@@ -1,27 +1,94 @@
 """
-Week 4 TODO: wire everything into a FastAPI app.
+Week 4: FastAPI app wiring hardware.py + steam.py + scoring.py into
+real HTTP endpoints.
 
-Endpoints to build out:
-  GET  /detect-hardware          -> hardware.detect_hardware()
-  GET  /search-game?name=...     -> Steam game search/autocomplete
-  GET  /compare?appid=...        -> steam + scoring, detected hardware
-  POST /compare-custom           -> steam + scoring, user-entered specs (PC builder mode)
+Endpoints:
+  GET  /detect-hardware                  -> your machine's detected specs
+  GET  /search-game?name=...             -> list of matching Steam games
+  GET  /compare?appid=...                -> verdict using YOUR detected hardware
+  POST /compare-custom                   -> verdict using USER-ENTERED specs (PC builder mode)
+
+Run with:
+    uvicorn app.main:app --reload
+
+Then open http://127.0.0.1:8000/docs for interactive API docs
+(FastAPI generates this automatically - genuinely useful for testing
+each endpoint by hand before the frontend exists).
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from app.hardware import detect_hardware
+from app.steam import search_game, get_game_requirements
+from app.scoring import compare_specs
 
 app = FastAPI(title="Game Compatibility Checker")
+
+# Allow the React frontend (running on a different port during dev,
+# e.g. localhost:5173 for Vite) to call this API from the browser.
+# Tighten this to a specific origin before deploying publicly.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/detect-hardware")
 def detect_hardware_endpoint():
-    """Already functional - Week 1 module wired in early so you can
-    hit this from the browser/curl and see it work end to end."""
     return detect_hardware()
 
 
-# TODO Week 3/4:
-# @app.get("/search-game")
-# @app.get("/compare")
-# @app.post("/compare-custom")
+@app.get("/search-game")
+def search_game_endpoint(name: str = Query(..., min_length=1)):
+    results = search_game(name)
+    if not results:
+        raise HTTPException(status_code=404, detail=f"No Steam games found matching '{name}'")
+    return results
+
+
+@app.get("/compare")
+def compare_endpoint(appid: int):
+    """Compares the SERVER's detected hardware (i.e. whoever's
+    machine is running this backend) against a game's requirements.
+    This only makes sense when the backend runs locally on the user's
+    own machine - which is the intended setup for this app."""
+    try:
+        requirements = get_game_requirements(appid)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    user_specs = detect_hardware()
+    return compare_specs(user_specs, requirements)
+
+
+# ---------------------------------------------------------------
+# Custom PC builder mode: user types in specs instead of using
+# whatever hardware this backend happens to be running on.
+# ---------------------------------------------------------------
+
+class CustomSpecs(BaseModel):
+    cpu_name: str
+    gpu_name: str
+    ram_gb: float
+
+
+@app.post("/compare-custom")
+def compare_custom_endpoint(specs: CustomSpecs, appid: int):
+    try:
+        requirements = get_game_requirements(appid)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Reuse the exact same comparison engine as /compare - just feed
+    # it hand-typed specs instead of detected ones, in the same shape
+    # compare_specs() expects.
+    user_specs = {
+        "cpu": {"name": specs.cpu_name},
+        "ram": {"total_gb": specs.ram_gb},
+        "gpus": [{"name": specs.gpu_name}],
+    }
+    return compare_specs(user_specs, requirements)

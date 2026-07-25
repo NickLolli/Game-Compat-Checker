@@ -22,11 +22,25 @@ IS_WINDOWS = platform.system() == "Windows"
 if IS_WINDOWS:
     try:
         import wmi
+        import pythoncom
         HAS_WMI = True
     except ImportError:
         HAS_WMI = False
 else:
     HAS_WMI = False
+
+
+def _connect_wmi() -> "wmi.WMI":
+    """Creates a WMI connection, initializing COM on the CURRENT
+    thread first. This is required because WMI relies on COM, which
+    Windows auto-initializes on the main thread of a plain script -
+    but FastAPI runs each request in a background worker thread from
+    a thread pool, where COM has NOT been initialized, causing
+    'x_wmi_uninitialised_thread' errors. Safe to call repeatedly
+    (harmless if COM is already initialized on this thread).
+    """
+    pythoncom.CoInitialize()
+    return wmi.WMI()
 
 
 def get_cpu_info() -> dict:
@@ -40,7 +54,7 @@ def get_cpu_info() -> dict:
     max_freq_mhz = getattr(psutil.cpu_freq(), "max", None)
 
     if IS_WINDOWS and HAS_WMI:
-        w = wmi.WMI()
+        w = _connect_wmi()
         processors = w.Win32_Processor()
         if processors:
             cpu = processors[0]  # multi-socket systems are rare enough to ignore for now
@@ -72,7 +86,7 @@ def get_gpu_info() -> list[dict]:
     if not HAS_WMI:
         return [{"name": "Unknown (run: pip install wmi)", "vram_gb": None}]
 
-    w = wmi.WMI()
+    w = _connect_wmi()
     controllers = w.Win32_VideoController()
 
     if not controllers:
