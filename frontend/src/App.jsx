@@ -2,6 +2,7 @@ import { useState } from 'react'
 import SearchBar from './components/SearchBar.jsx'
 import GameResultsList from './components/GameResultsList.jsx'
 import VerdictCard from './components/VerdictCard.jsx'
+import LoadingPulse from './components/LoadingPulse.jsx'
 import { searchGame, compareGame } from './api.js'
 import './App.css'
 
@@ -72,7 +73,7 @@ export default function App() {
           }}
         />
 
-        {isComparing && <div className="app__loading">Comparing hardware…</div>}
+        {isComparing && <LoadingPulse label="Comparing hardware…" />}
 
         {verdict && !isComparing && (
           <VerdictCard gameName={selectedGame.name} result={verdict} />

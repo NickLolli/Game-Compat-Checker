@@ -19,6 +19,7 @@ each endpoint by hand before the frontend exists).
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import requests
 
 from app.hardware import detect_hardware
 from app.steam import search_game, get_game_requirements
@@ -60,6 +61,8 @@ def compare_endpoint(appid: int):
         requirements = get_game_requirements(appid)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except requests.exceptions.RequestException:
+        raise HTTPException(status_code=502, detail="Couldn't reach Steam - check your internet connection and try again")
 
     user_specs = detect_hardware()
     return compare_specs(user_specs, requirements)
@@ -82,6 +85,8 @@ def compare_custom_endpoint(specs: CustomSpecs, appid: int):
         requirements = get_game_requirements(appid)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except requests.exceptions.RequestException:
+        raise HTTPException(status_code=502, detail="Couldn't reach Steam - check your internet connection and try again")
 
     # Reuse the exact same comparison engine as /compare - just feed
     # it hand-typed specs instead of detected ones, in the same shape

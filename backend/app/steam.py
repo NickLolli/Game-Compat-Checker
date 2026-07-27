@@ -32,10 +32,38 @@ APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"
 # Step 1: find a game's App ID from a typed name
 # ---------------------------------------------------------------
 
+def _is_base_game(appid: int) -> bool:
+    """Steam's search endpoint doesn't reliably distinguish games from
+    DLC (its 'type' field is just 'app' for everything). The
+    appdetails endpoint DOES have an accurate type field ('game',
+    'dlc', 'demo', 'music', etc.) - filters=basic keeps the response
+    small since we only need this one field, not full store data."""
+    try:
+        resp = requests.get(
+            APPDETAILS_URL,
+            params={"appids": appid, "cc": "us", "l": "english", "filters": "basic"},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        app_data = data.get(str(appid), {})
+        return app_data.get("success") and app_data.get("data", {}).get("type") == "game"
+    except requests.exceptions.RequestException:
+        return False
+
+
 def search_game(name: str, max_results: int = 5) -> list[dict]:
     """Returns a list of {"appid": int, "name": str} candidates.
     The caller (or the user, if there are multiple matches) should
     pick the right one - e.g. searching "Doom" returns several games.
+
+    Only returns base games - Steam's search also matches DLC, demos,
+    soundtracks, and other non-game content. We fetch extra raw
+    candidates and check each one's real type via appdetails, since
+    the search endpoint's own type field isn't reliable for this.
+    This costs one extra request per candidate checked, so it's
+    slower than a single search call - acceptable for a local dev
+    tool, but worth knowing about.
     """
     resp = requests.get(
         STORE_SEARCH_URL,
@@ -44,12 +72,16 @@ def search_game(name: str, max_results: int = 5) -> list[dict]:
     )
     resp.raise_for_status()
     data = resp.json()
+    candidates = data.get("items", [])
 
-    return [
-        {"appid": item["id"], "name": item["name"]}
-        for item in data.get("items", [])[:max_results]
-    ]
+    games = []
+    for item in candidates:
+        if _is_base_game(item["id"]):
+            games.append({"appid": item["id"], "name": item["name"]})
+        if len(games) >= max_results:
+            break
 
+    return games
 
 # ---------------------------------------------------------------
 # Step 2: fetch raw requirements HTML for a specific App ID
@@ -59,6 +91,10 @@ def fetch_raw_requirements(appid: int) -> dict:
     """Returns Steam's raw pc_requirements block:
     {"minimum": "<html>...", "recommended": "<html>..."}
     Some games only have "minimum" and no "recommended", or vice versa.
+
+    Raises ValueError with a clear message for known failure cases
+    (delisted/region-locked app, or a game with no PC requirements
+    listed at all) rather than letting a confusing exception bubble up.
     """
     resp = requests.get(
         APPDETAILS_URL, params={"appids": appid, "cc": "us", "l": "english"}, timeout=10
@@ -68,9 +104,30 @@ def fetch_raw_requirements(appid: int) -> dict:
 
     app_data = data.get(str(appid), {})
     if not app_data.get("success"):
-        raise ValueError(f"Steam returned no data for appid {appid}")
+        # Happens for delisted, region-locked, or otherwise
+        # unavailable app IDs - Steam just says success: false with
+        # no further detail.
+        raise ValueError(
+            f"Steam has no page data for appid {appid} "
+            f"(it may be delisted or unavailable in this region)"
+        )
 
-    return app_data.get("data", {}).get("pc_requirements", {})
+    pc_requirements = app_data.get("data", {}).get("pc_requirements", {})
+
+    # Known Steam API quirk: when a game genuinely has no PC
+    # requirements listed, Steam returns an empty LIST [] instead of
+    # an empty dict {} for this field - breaks .get() calls downstream
+    # if we don't normalize it here.
+    if not isinstance(pc_requirements, dict):
+        pc_requirements = {}
+
+    if not pc_requirements.get("minimum") and not pc_requirements.get("recommended"):
+        raise ValueError(
+            f"'{app_data.get('data', {}).get('name', appid)}' doesn't list "
+            f"PC system requirements on its Steam page"
+        )
+
+    return pc_requirements
 
 
 # ---------------------------------------------------------------
@@ -127,6 +184,9 @@ def _first_alternative(text: str | None) -> str | None:
     """
     if not text:
         return None
+    # Split on "or" or "," - whichever comes first in the string -
+    # so we don't accidentally split on a comma that appears AFTER
+    # an "or" split point (e.g. only take the true first option).
     or_split = re.split(r"\s+or\s+", text, maxsplit=1, flags=re.IGNORECASE)
     comma_split = text.split(",", 1)
 

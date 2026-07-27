@@ -134,12 +134,20 @@ def normalize_name(raw_name: str) -> str:
     return name
 
 
-def find_score(raw_name: str, table: dict[str, int], cutoff: float = 0.6) -> tuple[int | None, str | None]:
+def find_score(raw_name: str | None, table: dict[str, int], cutoff: float = 0.6) -> tuple[int | None, str | None]:
     """
     Look up a benchmark score for a raw hardware name against a table.
     Returns (score, matched_key) or (None, None) if nothing close enough
     was found. Tries exact match first, then fuzzy matching.
+
+    raw_name can legitimately be None - happens when steam.py's parser
+    couldn't extract a given field (e.g. a game with no "recommended"
+    tier listed at all, or oddly formatted requirements text) - treat
+    that the same as "no match found" rather than crashing.
     """
+    if not raw_name:
+        return None, None
+
     normalized = normalize_name(raw_name)
 
     if normalized in table:
@@ -161,7 +169,6 @@ def find_score(raw_name: str, table: dict[str, int], cutoff: float = 0.6) -> tup
             return table[key], key
 
     return None, None
-
 
 # ---------------------------------------------------------------
 # TODO (future improvement): replace/supplement this hardcoded table
