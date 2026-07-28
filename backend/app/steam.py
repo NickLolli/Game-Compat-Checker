@@ -180,6 +180,18 @@ def _extract_ram_gb(ram_text: str | None) -> float | None:
     return float(match.group(1)) if match else None
 
 
+def _strip_descriptive_prefix(text: str | None) -> str | None:
+    """Some games prefix the actual hardware name with a description,
+    separated by ' - ' (space-dash-space, distinct from a hyphenated
+    model number like 'i5-8400' which has no spaces around its dash).
+    e.g. Counter-Strike 2 lists CPU as '4 hardware CPU threads -
+    Intel Core i5 750' - we want just 'Intel Core i5 750'. If there's
+    no ' - ' separator, returns the text unchanged."""
+    if not text or " - " not in text:
+        return text
+    return text.rsplit(" - ", 1)[-1].strip()
+
+
 def _first_alternative(text: str | None) -> str | None:
     """Steam lists alternatives two different ways depending on the
     game: 'Intel i5-8400 or AMD Ryzen 5 2600' AND 'AMD RX 470, NVIDIA
@@ -191,9 +203,6 @@ def _first_alternative(text: str | None) -> str | None:
     """
     if not text:
         return None
-    # Split on "or" or "," - whichever comes first in the string -
-    # so we don't accidentally split on a comma that appears AFTER
-    # an "or" split point (e.g. only take the true first option).
     or_split = re.split(r"\s+or\s+", text, maxsplit=1, flags=re.IGNORECASE)
     comma_split = text.split(",", 1)
 
@@ -214,8 +223,8 @@ def _parse_tier(html: str) -> dict:
     so there's nothing meaningful to score them against."""
     lines = _extract_list_items(html)
     return {
-        "cpu": _first_alternative(_find_field(lines, _CPU_LABELS)),
-        "gpu": _first_alternative(_find_field(lines, _GPU_LABELS)),
+        "cpu": _first_alternative(_strip_descriptive_prefix(_find_field(lines, _CPU_LABELS))),
+        "gpu": _first_alternative(_strip_descriptive_prefix(_find_field(lines, _GPU_LABELS))),
         "ram_gb": _extract_ram_gb(_find_field(lines, _RAM_LABELS)),
         "os": _find_field(lines, _OS_LABELS),
         "directx": _find_field(lines, _DIRECTX_LABELS),

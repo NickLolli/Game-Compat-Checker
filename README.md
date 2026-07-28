@@ -35,7 +35,7 @@ game-compat-checker/
 - [x] Week 3 — Live Steam data pipeline (`steam.py`)
 - [x] Week 4 — FastAPI backend (`main.py`)
 - [x] Week 5-6 — React frontend
-- [ ] Week 7+ — Custom PC builder form, polish, deploy
+- [x] Week 7+ — Custom PC builder form, polish, deploy
 
 ## Getting started
 
@@ -50,6 +50,8 @@ python -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+
+Clear Cache: Get-ChildItem -Recurse -Filter "__pycache__" | Remove-Item -Recurse -Force
 ```
 
 Runs at http://127.0.0.1:8000 — visit `/docs` for interactive API testing.
