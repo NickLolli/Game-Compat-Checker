@@ -2,8 +2,8 @@
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  padding: 28px;
-  margin-top: 28px;
+  padding: 32px 36px;
+  margin-top: 32px;
   animation: verdict-in 0.3s ease;
 }
 
@@ -17,7 +17,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -78,13 +78,21 @@
   border-color: var(--border-strong);
 }
 
+.verdict-card__note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .verdict-card__bottleneck {
-  margin-top: 18px;
-  padding: 12px 16px;
+  margin-top: 20px;
+  padding: 14px 18px;
   background: var(--bad-dim);
   border: 1px solid var(--bad);
   border-radius: var(--radius-sm);
   font-size: 14px;
+  line-height: 1.5;
   color: var(--text);
 }
 
@@ -95,16 +103,16 @@
 .verdict-card__rows {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 22px;
+  gap: 16px;
+  margin-top: 26px;
 }
 
 .verdict-row {
   display: grid;
-  grid-template-columns: 110px 1fr 150px 60px;
+  grid-template-columns: 120px 1fr 160px 64px;
   align-items: center;
-  gap: 16px;
-  padding: 10px 12px;
+  gap: 18px;
+  padding: 14px 16px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
 }

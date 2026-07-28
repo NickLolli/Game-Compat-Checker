@@ -192,6 +192,18 @@ def _strip_descriptive_prefix(text: str | None) -> str | None:
     return text.rsplit(" - ", 1)[-1].strip()
 
 
+def _strip_trailing_annotations(text: str | None) -> str | None:
+    """Some games append extra info after the hardware name that
+    breaks matching: a clock speed after '@' ('Core i5-7400 CPU @
+    3.00GHz') and/or a semicolon-separated note ('... ; Shader Model
+    5'). Strip both, keeping just the hardware name itself."""
+    if not text:
+        return text
+    text = text.split(";", 1)[0]
+    text = text.split("@", 1)[0]
+    return text.strip()
+
+
 def _first_alternative(text: str | None) -> str | None:
     """Steam lists alternatives two different ways depending on the
     game: 'Intel i5-8400 or AMD Ryzen 5 2600' AND 'AMD RX 470, NVIDIA
@@ -203,6 +215,9 @@ def _first_alternative(text: str | None) -> str | None:
     """
     if not text:
         return None
+    # Split on "or" or "," - whichever comes first in the string -
+    # so we don't accidentally split on a comma that appears AFTER
+    # an "or" split point (e.g. only take the true first option).
     or_split = re.split(r"\s+or\s+", text, maxsplit=1, flags=re.IGNORECASE)
     comma_split = text.split(",", 1)
 
@@ -223,8 +238,8 @@ def _parse_tier(html: str) -> dict:
     so there's nothing meaningful to score them against."""
     lines = _extract_list_items(html)
     return {
-        "cpu": _first_alternative(_strip_descriptive_prefix(_find_field(lines, _CPU_LABELS))),
-        "gpu": _first_alternative(_strip_descriptive_prefix(_find_field(lines, _GPU_LABELS))),
+        "cpu": _first_alternative(_strip_descriptive_prefix(_strip_trailing_annotations(_find_field(lines, _CPU_LABELS)))),
+        "gpu": _first_alternative(_strip_descriptive_prefix(_strip_trailing_annotations(_find_field(lines, _GPU_LABELS)))),
         "ram_gb": _extract_ram_gb(_find_field(lines, _RAM_LABELS)),
         "os": _find_field(lines, _OS_LABELS),
         "directx": _find_field(lines, _DIRECTX_LABELS),

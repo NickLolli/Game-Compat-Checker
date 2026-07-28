@@ -8,6 +8,14 @@ const VERDICT_STYLE = {
   'Unplayable (insufficient RAM)': { tone: 'bad', label: 'Unplayable' },
 }
 
+// Long/dynamic verdict strings (e.g. the "Unknown (couldn't match...)"
+// case) get a short badge label plus a separate explanatory note below
+// - cramming a full sentence into a pill badge breaks its shape.
+function resolveVerdictDisplay(verdict) {
+  if (VERDICT_STYLE[verdict]) return { ...VERDICT_STYLE[verdict], note: null }
+  return { tone: 'unknown', label: 'Unknown', note: verdict }
+}
+
 const COMPONENT_LABELS = { cpu: 'CPU', gpu: 'GPU', ram: 'RAM' }
 
 // Bar shows ratio-vs-recommended, capped visually at 1.5x so the
@@ -39,7 +47,7 @@ function Bar({ ratioVsRec, tone }) {
 
 export default function VerdictCard({ gameName, result }) {
   const { verdict, bottleneck, ratios_vs_recommended, ratios_vs_minimum, matched_hardware, reference_info } = result
-  const verdictStyle = VERDICT_STYLE[verdict] || { tone: 'unknown', label: verdict }
+  const verdictStyle = resolveVerdictDisplay(verdict)
 
   // Prefer showing the recommended tier's info since it's the more
   // useful reference point; fall back to minimum if recommended
@@ -58,6 +66,10 @@ export default function VerdictCard({ gameName, result }) {
           {verdictStyle.label}
         </div>
       </div>
+
+      {verdictStyle.note && (
+        <div className="verdict-card__note">{verdictStyle.note}</div>
+      )}
 
       {bottleneck && (
         <div className="verdict-card__bottleneck">

@@ -1,7 +1,7 @@
 .app {
-  max-width: 640px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 64px 20px 40px;
+  padding: 72px 24px 48px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
