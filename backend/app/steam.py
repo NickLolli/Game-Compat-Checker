@@ -49,6 +49,8 @@ def _is_base_game(appid: int) -> bool:
         app_data = data.get(str(appid), {})
         return app_data.get("success") and app_data.get("data", {}).get("type") == "game"
     except requests.exceptions.RequestException:
+        # If this one lookup fails, don't let it break the whole
+        # search - just exclude the candidate rather than crashing.
         return False
 
 
@@ -58,12 +60,13 @@ def search_game(name: str, max_results: int = 5) -> list[dict]:
     pick the right one - e.g. searching "Doom" returns several games.
 
     Only returns base games - Steam's search also matches DLC, demos,
-    soundtracks, and other non-game content. We fetch extra raw
-    candidates and check each one's real type via appdetails, since
-    the search endpoint's own type field isn't reliable for this.
-    This costs one extra request per candidate checked, so it's
-    slower than a single search call - acceptable for a local dev
-    tool, but worth knowing about.
+    soundtracks, and other non-game content (e.g. searching "Destiny
+    2" returns its expansions too). We fetch extra raw candidates and
+    check each one's real type via appdetails, since the search
+    endpoint's own type field isn't reliable for this (see
+    _is_base_game). This costs one extra request per candidate
+    checked, so it's slower than a single search call - acceptable
+    for a local dev tool, but worth knowing about.
     """
     resp = requests.get(
         STORE_SEARCH_URL,
@@ -82,6 +85,7 @@ def search_game(name: str, max_results: int = 5) -> list[dict]:
             break
 
     return games
+
 
 # ---------------------------------------------------------------
 # Step 2: fetch raw requirements HTML for a specific App ID
@@ -139,6 +143,9 @@ def fetch_raw_requirements(appid: int) -> dict:
 _CPU_LABELS = ["processor", "cpu"]
 _GPU_LABELS = ["graphics", "video card", "gpu"]
 _RAM_LABELS = ["memory", "ram"]
+_OS_LABELS = ["os", "operating system"]
+_DIRECTX_LABELS = ["directx"]
+_STORAGE_LABELS = ["storage", "hard drive space", "hard drive", "disk space"]
 
 
 def _extract_list_items(html: str) -> list[str]:
@@ -199,12 +206,20 @@ def _first_alternative(text: str | None) -> str | None:
 
 
 def _parse_tier(html: str) -> dict:
-    """Parse one tier (minimum or recommended) into {cpu, gpu, ram_gb}."""
+    """Parse one tier (minimum or recommended) into a dict.
+    cpu/gpu/ram_gb are used for actual scoring (scoring.py compares
+    these against detected hardware). os/directx/storage are
+    reference-only info we display but don't compare - we don't
+    detect the user's free disk space or exact Windows build number,
+    so there's nothing meaningful to score them against."""
     lines = _extract_list_items(html)
     return {
         "cpu": _first_alternative(_find_field(lines, _CPU_LABELS)),
         "gpu": _first_alternative(_find_field(lines, _GPU_LABELS)),
         "ram_gb": _extract_ram_gb(_find_field(lines, _RAM_LABELS)),
+        "os": _find_field(lines, _OS_LABELS),
+        "directx": _find_field(lines, _DIRECTX_LABELS),
+        "storage": _find_field(lines, _STORAGE_LABELS),
     }
 
 

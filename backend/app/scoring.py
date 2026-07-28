@@ -87,6 +87,22 @@ def compare_specs(user_specs: dict, game_requirements: dict) -> dict:
         "unmatched_components": [
             comp for comp, ratio in ratios_vs_minimum.items() if ratio is None
         ],
+        # Reference-only info, not scored - we don't detect the
+        # user's free disk space or exact OS build number, so there's
+        # nothing to meaningfully compare these against. Passed
+        # through so the frontend can just display them for context.
+        "reference_info": {
+            "minimum": {
+                "os": minimum.get("os"),
+                "directx": minimum.get("directx"),
+                "storage": minimum.get("storage"),
+            },
+            "recommended": {
+                "os": recommended.get("os"),
+                "directx": recommended.get("directx"),
+                "storage": recommended.get("storage"),
+            },
+        },
     }
 
 

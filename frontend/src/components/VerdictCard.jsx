@@ -38,8 +38,14 @@ function Bar({ ratioVsRec, tone }) {
 }
 
 export default function VerdictCard({ gameName, result }) {
-  const { verdict, bottleneck, ratios_vs_recommended, ratios_vs_minimum, matched_hardware } = result
+  const { verdict, bottleneck, ratios_vs_recommended, ratios_vs_minimum, matched_hardware, reference_info } = result
   const verdictStyle = VERDICT_STYLE[verdict] || { tone: 'unknown', label: verdict }
+
+  // Prefer showing the recommended tier's info since it's the more
+  // useful reference point; fall back to minimum if recommended
+  // wasn't listed for this game.
+  const refTier = reference_info?.recommended?.os ? reference_info.recommended : reference_info?.minimum
+  const hasRefInfo = refTier && (refTier.os || refTier.directx || refTier.storage)
 
   return (
     <div className="verdict-card">
@@ -95,6 +101,17 @@ export default function VerdictCard({ gameName, result }) {
       <div className="verdict-card__footnote">
         Ratios are relative to this game's <em>recommended</em> requirements. 1.00× means you match it exactly.
       </div>
+
+      {hasRefInfo && (
+        <div className="verdict-card__reference">
+          <div className="verdict-card__reference-label">Also listed (not compared)</div>
+          <div className="verdict-card__reference-items">
+            {refTier.os && <span><strong>OS:</strong> {refTier.os}</span>}
+            {refTier.directx && <span><strong>DirectX:</strong> {refTier.directx}</span>}
+            {refTier.storage && <span><strong>Storage:</strong> {refTier.storage}</span>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

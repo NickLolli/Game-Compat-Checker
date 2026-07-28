@@ -182,6 +182,34 @@
   line-height: 1.5;
 }
 
+.verdict-card__reference {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.verdict-card__reference-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.verdict-card__reference-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.verdict-card__reference-items strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
 @media (max-width: 600px) {
   .verdict-row {
     grid-template-columns: 1fr;
