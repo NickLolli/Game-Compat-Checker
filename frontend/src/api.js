@@ -30,6 +30,14 @@ export function compareCustom(appid, specs) {
   }).then(handleResponse)
 }
 
+export function compareManual(gameName, minimum, recommended) {
+  return fetch(`${API_BASE}/compare-manual`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game_name: gameName, minimum, recommended }),
+  }).then(handleResponse)
+}
+
 export function detectHardware() {
   return fetch(`${API_BASE}/detect-hardware`).then(handleResponse)
 }

@@ -97,3 +97,39 @@ def compare_custom_endpoint(specs: CustomSpecs, appid: int):
         "gpus": [{"name": specs.gpu_name}],
     }
     return compare_specs(user_specs, requirements)
+
+
+# ---------------------------------------------------------------
+# Manual game entry: for non-Steam games (Epic, GOG, itch.io, etc.)
+# where there's no API to pull requirements from. The user copies
+# min/recommended specs from wherever they found them, and we run
+# them through the exact same comparison engine - compare_specs()
+# doesn't care where the data came from.
+# ---------------------------------------------------------------
+
+class ManualTier(BaseModel):
+    cpu: str | None = None
+    gpu: str | None = None
+    ram_gb: float | None = None
+
+
+class ManualGameRequirements(BaseModel):
+    game_name: str
+    minimum: ManualTier
+    recommended: ManualTier | None = None
+
+
+@app.post("/compare-manual")
+def compare_manual_endpoint(payload: ManualGameRequirements):
+    requirements = {
+        "minimum": payload.minimum.model_dump(),
+        "recommended": (
+            payload.recommended.model_dump()
+            if payload.recommended
+            else {"cpu": None, "gpu": None, "ram_gb": None}
+        ),
+    }
+    user_specs = detect_hardware()
+    result = compare_specs(user_specs, requirements)
+    result["game_name"] = payload.game_name
+    return result
