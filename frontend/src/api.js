@@ -41,3 +41,7 @@ export function compareManual(gameName, minimum, recommended) {
 export function detectHardware() {
   return fetch(`${API_BASE}/detect-hardware`).then(handleResponse)
 }
+
+export function getHardwareOptions() {
+  return fetch(`${API_BASE}/hardware-options`).then(handleResponse)
+}

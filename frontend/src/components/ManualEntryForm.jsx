@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import AutocompleteInput from './AutocompleteInput.jsx'
+import { getHardwareOptions } from '../api.js'
 import './ManualEntryForm.css'
 
 const EMPTY_TIER = { cpu: '', gpu: '', ram_gb: '' }
@@ -17,6 +19,16 @@ export default function ManualEntryForm({ onSubmit, isLoading }) {
   const [gameName, setGameName] = useState('')
   const [minimum, setMinimum] = useState(EMPTY_TIER)
   const [recommended, setRecommended] = useState(EMPTY_TIER)
+  const [hardwareOptions, setHardwareOptions] = useState({ cpus: [], gpus: [] })
+
+  // Fetch the known CPU/GPU list once, for autocomplete suggestions.
+  // If this fails (e.g. backend not reachable yet), fields still work
+  // as plain text inputs - just without suggestions.
+  useEffect(() => {
+    getHardwareOptions()
+      .then(setHardwareOptions)
+      .catch(() => {})
+  }, [])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -43,8 +55,8 @@ export default function ManualEntryForm({ onSubmit, isLoading }) {
       </div>
 
       <div className="manual-form__tiers">
-        <TierFields title="Minimum" tier={minimum} onChange={setMinimum} />
-        <TierFields title="Recommended (optional)" tier={recommended} onChange={setRecommended} />
+        <TierFields title="Minimum" tier={minimum} onChange={setMinimum} options={hardwareOptions} />
+        <TierFields title="Recommended (optional)" tier={recommended} onChange={setRecommended} options={hardwareOptions} />
       </div>
 
       <button className="manual-form__submit" type="submit" disabled={isLoading || !gameName.trim()}>
@@ -54,7 +66,7 @@ export default function ManualEntryForm({ onSubmit, isLoading }) {
   )
 }
 
-function TierFields({ title, tier, onChange }) {
+function TierFields({ title, tier, onChange, options }) {
   function update(field, value) {
     onChange({ ...tier, [field]: value })
   }
@@ -62,17 +74,17 @@ function TierFields({ title, tier, onChange }) {
   return (
     <div className="manual-form__tier">
       <div className="manual-form__tier-title">{title}</div>
-      <input
-        type="text"
+      <AutocompleteInput
         placeholder="CPU (e.g. Intel Core i5-8400)"
         value={tier.cpu}
-        onChange={(e) => update('cpu', e.target.value)}
+        onChange={(v) => update('cpu', v)}
+        options={options.cpus}
       />
-      <input
-        type="text"
+      <AutocompleteInput
         placeholder="GPU (e.g. NVIDIA GTX 1060)"
         value={tier.gpu}
-        onChange={(e) => update('gpu', e.target.value)}
+        onChange={(v) => update('gpu', v)}
+        options={options.gpus}
       />
       <input
         type="number"

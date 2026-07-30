@@ -24,6 +24,7 @@ import requests
 from app.hardware import detect_hardware
 from app.steam import search_game, get_game_requirements
 from app.scoring import compare_specs
+from app.benchmarks import list_cpu_options, list_gpu_options
 
 app = FastAPI(title="Game Compatibility Checker")
 
@@ -133,3 +134,11 @@ def compare_manual_endpoint(payload: ManualGameRequirements):
     result = compare_specs(user_specs, requirements)
     result["game_name"] = payload.game_name
     return result
+
+
+@app.get("/hardware-options")
+def hardware_options_endpoint():
+    """Powers autocomplete in the manual entry form - every CPU/GPU
+    name we can actually score, so the user doesn't have to type an
+    exact match from memory."""
+    return {"cpus": list_cpu_options(), "gpus": list_gpu_options()}

@@ -282,6 +282,92 @@ def find_score(raw_name: str | None, table: dict[str, int], cutoff: float = 0.6)
 
 
 # ---------------------------------------------------------------
+# Display formatting - for autocomplete suggestions in the manual
+# entry form. Table keys are lowercase normalized ("rtx 3060", "core
+# i5-8400"), which isn't how you'd want to see them in a dropdown.
+# This isn't perfect (acronym detection is a fixed list, not
+# exhaustive), but it's good enough for a readable suggestion list.
+# ---------------------------------------------------------------
+
+_ACRONYMS = {"rtx", "gtx", "rx", "xt", "ti", "amd", "fx"}
+_INTEL_TIER_PATTERN = re.compile(r"^i[3579](-.*)?$")  # i5, i7-8400, etc. - Intel keeps these lowercase
+
+
+def _format_display_name(key: str) -> str:
+    words = []
+    for word in key.split():
+        if word in _ACRONYMS:
+            words.append(word.upper())
+        elif word.startswith("fx-"):
+            words.append("FX-" + word[3:])  # "fx-6300" -> "FX-6300"
+        elif _INTEL_TIER_PATTERN.match(word):
+            words.append(word)  # keep "i5", "i7-8400" lowercase as Intel brands it
+        elif word.endswith("gb"):
+            words.append(word[:-2] + "GB")
+        else:
+            words.append(word[:1].upper() + word[1:])
+    return " ".join(words)
+
+
+# Brand prefixes for readability in the autocomplete dropdown (e.g.
+# "GTX 1060" -> "NVIDIA GTX 1060"). Matched against the raw lowercase
+# key's start, checked in order (more specific patterns first). This
+# is purely cosmetic - find_score()'s normalizer strips these same
+# vendor words back out before matching, so it doesn't affect scoring.
+_GPU_BRAND_PREFIXES = [
+    ("rtx", "NVIDIA"),
+    ("gtx", "NVIDIA"),
+    ("gt ", "NVIDIA"),
+    ("arc", "Intel"),
+    ("iris", "Intel"),
+    ("uhd", "Intel"),
+    ("radeon", "AMD"),   # covers "radeon graphics", "radeon 780m" etc.
+    ("rx ", "AMD Radeon"),
+    ("vega", "AMD Radeon"),
+]
+
+_CPU_BRAND_PREFIXES = [
+    ("core ultra", "Intel"),
+    ("core i", "Intel"),
+    ("core ", "Intel"),   # older "Core i5 750"-style entries without a dash
+    ("pentium", "Intel"),
+    ("celeron", "Intel"),
+    ("ryzen", "AMD"),
+    ("fx-", "AMD"),
+    ("athlon", "AMD"),
+]
+
+
+def _add_brand_prefix(key: str, formatted: str, brand_rules: list[tuple[str, str]]) -> str:
+    for prefix, brand in brand_rules:
+        if key.startswith(prefix):
+            return f"{brand} {formatted}"
+    return formatted
+
+
+def list_cpu_options() -> list[str]:
+    """All known CPU names, nicely formatted with brand prefix and
+    alphabetically sorted - used to power autocomplete in the manual
+    entry form."""
+    names = [
+        _add_brand_prefix(k, _format_display_name(k), _CPU_BRAND_PREFIXES)
+        for k in CPU_SCORES
+    ]
+    return sorted(names)
+
+
+def list_gpu_options() -> list[str]:
+    """All known GPU names, nicely formatted with brand prefix and
+    alphabetically sorted - used to power autocomplete in the manual
+    entry form."""
+    names = [
+        _add_brand_prefix(k, _format_display_name(k), _GPU_BRAND_PREFIXES)
+        for k in GPU_SCORES
+    ]
+    return sorted(names)
+
+
+# ---------------------------------------------------------------
 # TODO (future improvement): replace/supplement this hardcoded table
 # with a larger dataset - e.g. download a public PassMark CPU/GPU
 # CSV export periodically and merge it in, so new hardware releases
